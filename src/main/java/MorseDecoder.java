@@ -53,6 +53,15 @@ public class MorseDecoder {
 
         double[] sampleBuffer = new double[BIN_SIZE * inputFile.getNumChannels()];
         for (int binIndex = 0; binIndex < totalBinCount; binIndex++) {
+            double sum = 0;
+            inputFile.readFrames(sampleBuffer, BIN_SIZE);
+            for (double i : sampleBuffer) {
+                sum += Math.abs(i);
+            }
+            returnBuffer[binIndex] = sum;
+
+
+
             // Get the right number of samples from the inputFile
             // Sum all the samples together and store them in the returnBuffer
         }
@@ -63,7 +72,7 @@ public class MorseDecoder {
     private static final double POWER_THRESHOLD = 10;
 
     /** Bin threshold for dots or dashes. Related to BIN_SIZE. You may need to modify this value. */
-    private static final int DASH_BIN_COUNT = 8;
+    private static final int DASH_BIN_COUNT = 10;
 
     /**
      * Convert power measurements to dots, dashes, and spaces.
@@ -81,13 +90,50 @@ public class MorseDecoder {
          * There are four conditions to handle. Symbols should only be output when you see
          * transitions. You will also have to store how much power or silence you have seen.
          */
+        for (double meme : powerMeasurements) {
+            System.out.println(meme);
+        }
+        String chars = "";
+        boolean wassilent = powerMeasurements[0] < POWER_THRESHOLD;
+        boolean issilent;
+        int length = 1;
+        for (int i = 1; i < powerMeasurements.length; i++) {
+            if (powerMeasurements[i] > POWER_THRESHOLD) {
+                issilent = false;
+                if (wassilent) {
+                    if (length >= DASH_BIN_COUNT) {
+                        chars += " ";
+                        System.out.println("Added space");
+                    }
+                    length = 1;
+                } else {
+                    length++;
+                }
+            } else {
+                issilent = true;
+                if (wassilent) {
+                    length++;
+                } else {
+                    if (length >= DASH_BIN_COUNT) {
+                        chars += "-";
+                        System.out.println("added dash");
+                    } else {
+                        chars += ".";
+                        System.out.println("Added dot");
+                    }
+                    length = 1;
+                }
+            }
+            wassilent = issilent;
+        }
+
 
         // if ispower and waspower
         // else if ispower and not waspower
         // else if issilence and wassilence
         // else if issilence and not wassilence
 
-        return "";
+        return chars;
     }
 
     /**
@@ -135,6 +181,7 @@ public class MorseDecoder {
                     put("----.", "9");
                     put("-----", "0");
                     put(".-.-.-", ".");
+                    put("-..-.", "/");
                 }
             };
 
@@ -153,6 +200,7 @@ public class MorseDecoder {
      */
     private static String dotDashToAlpha(final String dotDashes) {
         String returnString = "";
+        System.out.println(dotDashes);
         for (String dotDash : dotDashes.split(" ")) {
             if (MORSE_TO_ALPHA.containsKey(dotDash)) {
                 returnString += MORSE_TO_ALPHA.get(dotDash);
